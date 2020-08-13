@@ -71,7 +71,6 @@ main(int argc, char *argv[])
 		return -1;
 	}
 
-
 	/* resources - memory region */
 	struct rpma_mr_local *mr = NULL;
 	/* separate 4KiB of PMem for each user */
