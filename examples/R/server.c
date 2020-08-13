@@ -3,8 +3,6 @@
 
 /*
  * server.c -- a server of the flush-to-persistent example
- *
- * Please see README.md for a detailed description of this example.
  */
 
 #include <stdlib.h>
