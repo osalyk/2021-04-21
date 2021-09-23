@@ -11,20 +11,12 @@
 #include <librpma.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-#ifdef USE_LIBPMEM
 #include <libpmem.h>
-#define USAGE_STR "usage: %s <server_address> <port> [<pmem-path>] " \
-	"[direct-pmem-write]\n"
-#else
-#define USAGE_STR "usage: %s <server_address> <port>\n"
-#endif /* USE_LIBPMEM */
-
-#ifdef USE_LIBPMEM
-#define ON_STR "on"
-#endif /* USE_LIBPMEM */
 
 #include "connection.h"
+
+#define USAGE_STR	"usage: %s <server_address> <port> [<pmem-path>] [direct-pmem-write]\n"
+#define ON_STR		"on"
 
 int
 main(int argc, char *argv[])
@@ -52,7 +44,6 @@ main(int argc, char *argv[])
 
 	int is_pmem = 0;
 
-#ifdef USE_LIBPMEM
 	if (argc >= 4) {
 		char *path = argv[3];
 
@@ -113,7 +104,6 @@ main(int argc, char *argv[])
 			pmem_persist(mr_ptr, SIGNATURE_LEN);
 		}
 	}
-#endif /* USE_LIBPMEM */
 
 	/* if no pmem support or it is not provided */
 	if (mr_ptr == NULL) {
@@ -141,7 +131,6 @@ main(int argc, char *argv[])
 	if (ret)
 		goto err_free;
 
-#ifdef USE_LIBPMEM
 	/* configure peer's direct write to pmem support */
 	if (argc == 5) {
 		ret = rpma_peer_cfg_set_direct_write_to_pmem(pcfg,
@@ -151,7 +140,6 @@ main(int argc, char *argv[])
 			goto err_free;
 		}
 	}
-#endif /* USE_LIBPMEM */
 
 	/*
 	 * lookup an ibv_context via the address and create a new peer using it
@@ -245,12 +233,10 @@ err_pcfg_delete:
 	(void) rpma_peer_cfg_delete(&pcfg);
 
 err_free:
-#ifdef USE_LIBPMEM
 	if (is_pmem) {
 		pmem_unmap(mr_ptr, mr_size);
 		mr_ptr = NULL;
 	}
-#endif
 
 	if (mr_ptr != NULL)
 		free(mr_ptr);
