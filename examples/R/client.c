@@ -41,8 +41,8 @@ static inline void
 write_hello_str(struct hello_t *hello, enum lang_t lang)
 {
 	hello->lang = lang;
-	strncpy(hello->str, hello_str[hello->lang], KILOBYTE - 1);
-	hello->str[KILOBYTE - 1] = '\0';
+	strncpy(hello->str, hello_str[hello->lang], HELLO_STR_SIZE - 1);
+	hello->str[HELLO_STR_SIZE - 1] = '\0';
 }
 
 static void
@@ -73,7 +73,7 @@ main(int argc, char *argv[])
 
 	/* resources - memory region */
 	void *mr_ptr;
-	size_t mr_size = 0;
+	size_t mr_size;
 	size_t data_offset = 0;
 	struct rpma_mr_remote *dst_mr = NULL;
 	size_t dst_size = 0;
@@ -81,19 +81,10 @@ main(int argc, char *argv[])
 	struct rpma_mr_local *src_mr = NULL;
 	struct rpma_completion cmpl;
 
-	struct hello_t *hello = NULL;
-
-	mr_ptr = malloc_aligned(sizeof(struct hello_t));
+	mr_size = sizeof(struct hello_t);
+	mr_ptr = malloc_aligned(mr_size);
 	if (mr_ptr == NULL)
 		return -1;
-
-	mr_size = sizeof(struct hello_t);
-	hello = mr_ptr;
-
-	/* write an initial value */
-	write_hello_str(hello, en);
-
-	(void) printf("Next value: %s\n", hello->str);
 
 	/* RPMA resources */
 	struct rpma_peer_cfg *pcfg = NULL;
@@ -163,6 +154,11 @@ main(int argc, char *argv[])
 				dst_size, KILOBYTE);
 		goto err_mr_remote_delete;
 	}
+
+	/* write the next value */
+	struct hello_t *hello = mr_ptr;
+	write_hello_str(hello, en);
+	(void) printf("Next value: %s\n", hello->str);
 
 	dst_offset = dst_data->data_offset;
 	ret = rpma_write(conn, dst_mr, dst_offset, src_mr,
