@@ -15,18 +15,10 @@
 
 #include "connection.h"
 
-#define USAGE_STR "usage: %s <server_address> <port>\n"
-
-#define HELLO_STR_SIZE 1024
-
-struct hello_t {
-	char str[HELLO_STR_SIZE];
-};
+#define USAGE_STR	"usage: %s <server_address> <port>\n"
+#define FLUSH_ID	(void *)0xF01D /* a random identifier */
 
 static const char *hello_str = "Hello world!";
-
-#define HELLO_STR_OFFSET	offsetof(struct hello_t, str)
-#define FLUSH_ID		(void *)0xF01D /* a random identifier */
 
 int
 main(int argc, char *argv[])
@@ -63,7 +55,7 @@ main(int argc, char *argv[])
 	bool direct_write_to_pmem = false;
 	enum rpma_flush_type flush_type;
 
-	local_mr_size = sizeof(struct hello_t);
+	local_mr_size = KILOBYTE;
 	local_mr_ptr = malloc_aligned(local_mr_size);
 	if (local_mr_ptr == NULL)
 		return -1;
@@ -165,13 +157,12 @@ main(int argc, char *argv[])
 			(char *)local_mr_ptr + local_offset);
 
 	/* write the next value */
-	struct hello_t *hello = local_mr_ptr;
-	strncpy(hello->str, hello_str, HELLO_STR_SIZE);
-	(void) printf("Writing the message: %s\n", hello->str);
+	strncpy(local_mr_ptr, hello_str, KILOBYTE);
+	(void) printf("Writing the message: %s\n", (char *)local_mr_ptr);
 
 	remote_offset = remote_data->data_offset;
-	ret = rpma_write(conn, remote_mr, remote_offset, local_mr,
-			(local_offset + HELLO_STR_OFFSET), KILOBYTE,
+	ret = rpma_write(conn, remote_mr, remote_offset,
+			local_mr, local_offset, KILOBYTE,
 			RPMA_F_COMPLETION_ON_ERROR, NULL);
 	if (ret)
 		goto err_mr_remote_delete;
