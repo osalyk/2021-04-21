@@ -51,7 +51,7 @@ if(NOT LIBIBVERBS_FOUND)
 	find_package(LIBIBVERBS REQUIRED libibverbs)
 endif()
 if(NOT LIBPMEM_FOUND)
-	find_package(LIBPMEM ${LIBPMEM_REQUIRED_VERSION} libpmem)
+	find_package(LIBPMEM ${LIBPMEM_REQUIRED_VERSION} REQUIRED libpmem)
 endif()
 
 link_directories(${LIBRPMA_LIBRARY_DIRS})
@@ -59,16 +59,8 @@ link_directories(${LIBRPMA_LIBRARY_DIRS})
 function(add_example name)
 	set(srcs ${ARGN})
 	add_executable(${name} ${srcs})
-	target_include_directories(${name} PRIVATE ${LIBRPMA_INCLUDE_DIRS})
-	target_link_libraries(${name} rpma ${LIBIBVERBS_LIBRARIES} ${LIBRT_LIBRARIES})
-
-	if(LIBPMEM_FOUND)
-		target_include_directories(${name}
-			PRIVATE ${LIBPMEM_INCLUDE_DIRS})
-		target_link_libraries(${name} ${LIBPMEM_LIBRARIES})
-		target_compile_definitions(${name}
-			PRIVATE USE_LIBPMEM)
-	endif()
+	target_include_directories(${name} PRIVATE ${LIBRPMA_INCLUDE_DIRS} ${LIBPMEM_INCLUDE_DIRS})
+	target_link_libraries(${name} rpma ${LIBIBVERBS_LIBRARIES} ${LIBRT_LIBRARIES} ${LIBPMEM_LIBRARIES})
 endfunction()
 
 add_example(server server.c connection.c)
