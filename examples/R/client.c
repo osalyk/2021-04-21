@@ -73,7 +73,7 @@ main(int argc, char *argv[])
 
 	/* resources - memory region */
 	void *local_mr_ptr;
-	size_t local_mr_size = 0;
+	size_t local_mr_size;
 	size_t local_offset = 0;
 	struct rpma_mr_remote *remote_mr = NULL;
 	size_t remote_size = 0;
@@ -81,26 +81,17 @@ main(int argc, char *argv[])
 	struct rpma_mr_local *local_mr = NULL;
 	struct rpma_completion cmpl;
 
-	struct hello_t *hello = NULL;
-
-	local_mr_ptr = malloc_aligned(sizeof(struct hello_t));
-	if (local_mr_ptr == NULL)
-		return -1;
-
-	local_mr_size = sizeof(struct hello_t);
-	hello = local_mr_ptr;
-
-	/* write an initial value */
-	write_hello_str(hello, en);
-
-	(void) printf("Next value: %s\n", hello->str);
-
 	/* RPMA resources */
 	struct rpma_peer_cfg *pcfg = NULL;
 	struct rpma_peer *peer = NULL;
 	struct rpma_conn *conn = NULL;
 	bool direct_write_to_pmem = false;
 	enum rpma_flush_type flush_type;
+
+	local_mr_size = sizeof(struct hello_t);
+	local_mr_ptr = malloc_aligned(local_mr_size);
+	if (local_mr_ptr == NULL)
+		return -1;
 
 	/*
 	 * lookup an ibv_context via the address and create a new peer using it
@@ -163,6 +154,11 @@ main(int argc, char *argv[])
 				remote_size, KILOBYTE);
 		goto err_mr_remote_delete;
 	}
+
+	/* write the next value */
+	struct hello_t *hello = local_mr_ptr;
+	write_hello_str(hello, en);
+	(void) printf("Next value: %s\n", hello->str);
 
 	remote_offset = remote_data->data_offset;
 	ret = rpma_write(conn, remote_mr, remote_offset, local_mr,
