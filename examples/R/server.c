@@ -17,6 +17,7 @@
 
 #define USAGE_STR	"usage: %s <server_address> <port> [<pmem-path>] [direct-pmem-write]\n"
 #define ON_STR		"on"
+#define INIT_STR	"Initial server string"
 
 int
 main(int argc, char *argv[])
@@ -121,10 +122,11 @@ main(int argc, char *argv[])
 	struct rpma_ep *ep = NULL;
 	struct rpma_conn *conn = NULL;
 
-	/* if the string content is not empty */
-	if (((char *)mr_ptr + data_offset)[0] != '\0') {
-		(void) printf("Old value: %s\n", (char *)mr_ptr + data_offset);
-	}
+	/* set and print the initial content */
+	char *data_ptr = (char *)mr_ptr + data_offset;
+	/* mr_size - data_offset >= KILOBYTE */
+	strncpy(data_ptr, INIT_STR, KILOBYTE);
+	(void) printf("Old value: %s\n", data_ptr);
 
 	/* create a peer configuration structure */
 	ret = rpma_peer_cfg_new(&pcfg);
@@ -215,7 +217,7 @@ main(int argc, char *argv[])
 	if (ret)
 		goto err_mr_dereg;
 
-	(void) printf("New value: %s\n", (char *)mr_ptr + data_offset);
+	(void) printf("New value: %s\n", data_ptr);
 
 err_mr_dereg:
 	/* deregister the memory region */
