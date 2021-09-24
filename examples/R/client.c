@@ -72,19 +72,14 @@ main(int argc, char *argv[])
 	int ret;
 
 	/* resources - memory region */
-	void *mr_ptr;
-	size_t mr_size;
+	void *local_mr_ptr;
+	size_t local_mr_size;
 	size_t data_offset = 0;
-	struct rpma_mr_remote *dst_mr = NULL;
-	size_t dst_size = 0;
-	size_t dst_offset = 0;
-	struct rpma_mr_local *src_mr = NULL;
+	struct rpma_mr_remote *remote_mr = NULL;
+	size_t remote_size = 0;
+	size_t remote_offset = 0;
+	struct rpma_mr_local *local_mr = NULL;
 	struct rpma_completion cmpl;
-
-	mr_size = sizeof(struct hello_t);
-	mr_ptr = malloc_aligned(mr_size);
-	if (mr_ptr == NULL)
-		return -1;
 
 	/* RPMA resources */
 	struct rpma_peer_cfg *pcfg = NULL;
@@ -92,6 +87,11 @@ main(int argc, char *argv[])
 	struct rpma_conn *conn = NULL;
 	bool direct_write_to_pmem = false;
 	enum rpma_flush_type flush_type;
+
+	local_mr_size = sizeof(struct hello_t);
+	local_mr_ptr = malloc_aligned(local_mr_size);
+	if (local_mr_ptr == NULL)
+		return -1;
 
 	/*
 	 * lookup an ibv_context via the address and create a new peer using it
@@ -106,8 +106,8 @@ main(int argc, char *argv[])
 		goto err_peer_delete;
 
 	/* register the memory RDMA write */
-	ret = rpma_mr_reg(peer, mr_ptr, mr_size, RPMA_MR_USAGE_WRITE_SRC,
-				&src_mr);
+	ret = rpma_mr_reg(peer, local_mr_ptr, local_mr_size, RPMA_MR_USAGE_WRITE_SRC,
+				&local_mr);
 	if (ret)
 		goto err_conn_disconnect;
 
@@ -121,14 +121,14 @@ main(int argc, char *argv[])
 	 * Create a remote peer configuration structure from the received
 	 * descriptor and apply it to the current connection.
 	 */
-	struct common_data *dst_data = pdata.ptr;
+	struct common_data *remote_data = pdata.ptr;
 	ret = rpma_peer_cfg_from_descriptor(
-			&dst_data->descriptors[dst_data->mr_desc_size],
-			dst_data->pcfg_desc_size, &pcfg);
+			&remote_data->descriptors[remote_data->mr_desc_size],
+			remote_data->pcfg_desc_size, &pcfg);
 	if (ret)
 		goto err_mr_dereg;
-	ret = rpma_peer_cfg_get_direct_write_to_pmem(pcfg,
-			&direct_write_to_pmem);
+
+	ret = rpma_peer_cfg_get_direct_write_to_pmem(pcfg, &direct_write_to_pmem);
 	ret |= rpma_conn_apply_remote_peer_cfg(conn, pcfg);
 	(void) rpma_peer_cfg_delete(&pcfg);
 	/* either get or apply failed */
@@ -139,29 +139,29 @@ main(int argc, char *argv[])
 	 * Create a remote memory registration structure from the received
 	 * descriptor.
 	 */
-	ret = rpma_mr_remote_from_descriptor(&dst_data->descriptors[0],
-			dst_data->mr_desc_size, &dst_mr);
+	ret = rpma_mr_remote_from_descriptor(&remote_data->descriptors[0],
+			remote_data->mr_desc_size, &remote_mr);
 	if (ret)
 		goto err_mr_dereg;
 
 	/* get the remote memory region size */
-	ret = rpma_mr_remote_get_size(dst_mr, &dst_size);
+	ret = rpma_mr_remote_get_size(remote_mr, &remote_size);
 	if (ret) {
 		goto err_mr_remote_delete;
-	} else if (dst_size < KILOBYTE) {
+	} else if (remote_size < KILOBYTE) {
 		fprintf(stderr,
 				"Remote memory region size too small for writing the data of the assumed size (%zu < %d)\n",
-				dst_size, KILOBYTE);
+				remote_size, KILOBYTE);
 		goto err_mr_remote_delete;
 	}
 
 	/* write the next value */
-	struct hello_t *hello = mr_ptr;
+	struct hello_t *hello = local_mr_ptr;
 	write_hello_str(hello, en);
 	(void) printf("Next value: %s\n", hello->str);
 
-	dst_offset = dst_data->data_offset;
-	ret = rpma_write(conn, dst_mr, dst_offset, src_mr,
+	remote_offset = remote_data->data_offset;
+	ret = rpma_write(conn, remote_mr, remote_offset, local_mr,
 			(data_offset + offsetof(struct hello_t, str)), KILOBYTE,
 			RPMA_F_COMPLETION_ON_ERROR, NULL);
 	if (ret)
@@ -177,7 +177,7 @@ main(int argc, char *argv[])
 		flush_type = RPMA_FLUSH_TYPE_VISIBILITY;
 	}
 
-	ret = rpma_flush(conn, dst_mr, dst_offset, KILOBYTE, flush_type,
+	ret = rpma_flush(conn, remote_mr, remote_offset, KILOBYTE, flush_type,
 			RPMA_F_COMPLETION_ALWAYS, FLUSH_ID);
 	if (ret)
 		goto err_mr_remote_delete;
@@ -217,11 +217,11 @@ main(int argc, char *argv[])
 
 err_mr_remote_delete:
 	/* delete the remote memory region's structure */
-	(void) rpma_mr_remote_delete(&dst_mr);
+	(void) rpma_mr_remote_delete(&remote_mr);
 
 err_mr_dereg:
 	/* deregister the memory region */
-	(void) rpma_mr_dereg(&src_mr);
+	(void) rpma_mr_dereg(&local_mr);
 
 err_conn_disconnect:
 	(void) common_disconnect_and_wait_for_conn_close(&conn);
@@ -231,7 +231,7 @@ err_peer_delete:
 	(void) rpma_peer_delete(&peer);
 
 err_free:
-	free(mr_ptr);
+	free(local_mr_ptr);
 
 	return ret;
 }
