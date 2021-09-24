@@ -155,10 +155,44 @@ main(int argc, char *argv[])
 		goto err_mr_remote_delete;
 	}
 
+	/* read the initial value */
+	ret = rpma_read(conn, local_mr, local_offset,
+			remote_mr, remote_offset, remote_size,
+			RPMA_F_COMPLETION_ALWAYS, NULL);
+	if (ret)
+		goto err_mr_remote_delete;
+
+	/* wait for the completion to be ready */
+	ret = rpma_conn_completion_wait(conn);
+	if (ret)
+		goto err_mr_remote_delete;
+
+	/* wait for a completion of the RDMA read */
+	ret = rpma_conn_completion_get(conn, &cmpl);
+	if (ret)
+		goto err_mr_remote_delete;
+
+	if (cmpl.op_status != IBV_WC_SUCCESS) {
+		ret = -1;
+		(void) fprintf(stderr, "rpma_read() failed: %s\n",
+				ibv_wc_status_str(cmpl.op_status));
+		goto err_mr_remote_delete;
+	}
+
+	if (cmpl.op != RPMA_OP_READ) {
+		ret = -1;
+		(void) fprintf(stderr, "unexpected cmpl.op value (%d != %d)\n",
+				cmpl.op, RPMA_OP_READ);
+		goto err_mr_remote_delete;
+	}
+
+	(void) fprintf(stdout, "The initial content of the server memory (just read): %s\n",
+			(char *)local_mr_ptr + local_offset);
+
 	/* write the next value */
 	struct hello_t *hello = local_mr_ptr;
 	write_hello_str(hello, en);
-	(void) printf("Next value: %s\n", hello->str);
+	(void) printf("Writing the message: %s\n", hello->str);
 
 	remote_offset = remote_data->data_offset;
 	ret = rpma_write(conn, remote_mr, remote_offset, local_mr,
