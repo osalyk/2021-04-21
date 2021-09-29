@@ -1,9 +1,10 @@
 #!/bin/bash -ex
 #
-# XXX placeholder
+# shell commands to build the simple_* example
 #
 
 mkdir -p build
 cd build
 cmake ..
-make simple
+make simple_client
+make simple_server
