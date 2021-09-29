@@ -8,11 +8,9 @@
  * Please see README.md for a detailed description of this example.
  */
 
-#include <librpma.h>
 #include <inttypes.h>
 #include <stdlib.h>
-#include <stdio.h>
-
+#include <librpma.h>
 #include "connection.h"
 
 #define USAGE_STR	"usage: %s <server_address> <port>\n"
@@ -216,6 +214,10 @@ err_mr_dereg:
 	(void) rpma_mr_dereg(&local_mr);
 
 err_conn_disconnect:
+	/*
+	 * Disconnect, wait for RPMA_CONN_CLOSED
+	 * and delete the connection structure.
+	 */
 	(void) common_disconnect_and_wait_for_conn_close(&conn);
 
 err_peer_delete:

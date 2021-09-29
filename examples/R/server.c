@@ -7,12 +7,9 @@
  * Please see README.md for a detailed description of this example.
  */
 
-#include <inttypes.h>
-#include <librpma.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <libpmem.h>
-
+#include <librpma.h>
 #include "connection.h"
 
 #define USAGE_STR	"usage: %s <server_address> <port> [<pmem-path>] [direct-pmem-write]\n"
