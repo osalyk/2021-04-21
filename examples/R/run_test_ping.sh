@@ -3,5 +3,6 @@
 # XXX placeholder
 #
 
-SERVER_IP=192.168.1.100
+SERVER_IP=$RPMA_SOFT_ROCE_IP
+
 ping -c5 $SERVER_IP
