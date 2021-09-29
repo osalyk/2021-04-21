@@ -1,8 +1,11 @@
 #!/bin/bash -ex
 #
-# XXX placeholder
+# shell commands to run the main example
 #
 
+SERVER_IP=$RPMA_SOFT_ROCE_IP
+SERVER_PORT=7204 # XXX each user requires a dedicated port number
+
 cd build
-./xxx_server & # XXX
-./xxx_client # XXX
+./server $SERVER_IP $SERVER_PORT & # XXX PMem needed
+./client $SERVER_IP $SERVER_PORT
