@@ -121,8 +121,10 @@ main(int argc, char *argv[])
 	}
 
 	/* read the initial value */
+	remote_offset = remote_data->data_offset;
+	size_t len = (local_mr_size < remote_size) ? local_mr_size : remote_size;
 	ret = rpma_read(conn, local_mr, local_offset,
-			remote_mr, remote_offset, remote_size,
+			remote_mr, remote_offset, len,
 			RPMA_F_COMPLETION_ALWAYS, NULL);
 	if (ret)
 		goto err_mr_remote_delete;
@@ -158,7 +160,6 @@ main(int argc, char *argv[])
 	strncpy(local_mr_ptr, hello_str, KILOBYTE);
 	(void) printf("Writing the message: %s\n", (char *)local_mr_ptr);
 
-	remote_offset = remote_data->data_offset;
 	ret = rpma_write(conn, remote_mr, remote_offset,
 			local_mr, local_offset, KILOBYTE,
 			RPMA_F_COMPLETION_ON_ERROR, NULL);
