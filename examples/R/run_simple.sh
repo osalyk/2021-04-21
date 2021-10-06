@@ -4,7 +4,7 @@
 #
 
 SERVER_IP=$RPMA_SOFT_ROCE_IP
-SERVER_PORT=7204 # XXX each user requires a dedicated port number
+SERVER_PORT=$((62000 + $PMEMUSER_ID))
 
 cd build
 ./simple_server $SERVER_IP $SERVER_PORT & # XXX PMem needed
