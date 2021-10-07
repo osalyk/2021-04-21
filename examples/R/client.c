@@ -121,7 +121,6 @@ main(int argc, char *argv[])
 	}
 
 	/* read the initial value */
-	remote_offset = remote_data->data_offset;
 	size_t len = (local_mr_size < remote_size) ? local_mr_size : remote_size;
 	ret = rpma_read(conn, local_mr, local_offset,
 			remote_mr, remote_offset, len,
