@@ -12,106 +12,71 @@
 #include <librpma.h>
 #include "connection.h"
 
-#define USAGE_STR	"usage: %s <server_address> <port> [<pmem-path>] [direct-pmem-write]\n"
-#define ON_STR		"on"
+#define USAGE_STR	"usage: %s <server_address> <port> <pmem-path> <user-id>\n"
 #define INIT_STR	"This is the initial server string."
+
+#define ERROR_ON_WRONG_USAGE(cond) \
+	do { \
+		if (cond) { \
+			fprintf(stderr, USAGE_STR, argv[0]); \
+			exit(-1); \
+		} \
+	} while (0)
 
 int
 main(int argc, char *argv[])
 {
-	/* validate parameters */
-	if (argc < 3) {
-		fprintf(stderr, USAGE_STR, argv[0]);
-		exit(-1);
-	}
+	int ret;
 
 	/* configure logging thresholds to see more details */
 	rpma_log_set_threshold(RPMA_LOG_THRESHOLD, RPMA_LOG_LEVEL_INFO);
 	rpma_log_set_threshold(RPMA_LOG_THRESHOLD_AUX, RPMA_LOG_LEVEL_INFO);
 
-	/* read common parameters */
+	/* validate parameters */
+	ERROR_ON_WRONG_USAGE(argc < 5);
+
+	/* read parameters */
 	char *addr = argv[1];
 	char *port = argv[2];
-	int ret;
+	char *path = argv[3];
+	int user_id = atoi(argv[4]);
+
+	ERROR_ON_WRONG_USAGE(user_id < 1 || user_id > MAX_USERS);
+
+	/* resources - PMem */
+	char *pmem_ptr;
+	size_t pmem_size;
+	int is_pmem;
+
+	/* map the file */
+	pmem_ptr = pmem_map_file(path, 0 /* len */, 0 /* flags */,
+			0 /* mode */, &pmem_size, &is_pmem);
+	if (pmem_ptr == NULL) {
+		(void) fprintf(stderr, "pmem_map_file() for %s failed\n", path);
+		return -1;
+	}
+
+	/* pmem is expected */
+	if (!is_pmem) {
+		(void) fprintf(stderr, "%s is not an actual PMEM\n", path);
+		(void) pmem_unmap(pmem_ptr, pmem_size);
+		return -1;
+	}
+
+	/* check if PMem has minimum required size */
+	if (pmem_size < PMEM_MIN_SIZE) {
+		(void) fprintf(stderr, "%s too small (%zu < %u)\n",
+				path, pmem_size, PMEM_MIN_SIZE);
+		(void) pmem_unmap(pmem_ptr, pmem_size);
+		return -1;
+	}
+
 
 	/* resources - memory region */
-	void *mr_ptr = NULL;
-	size_t mr_size = 0;
-	size_t data_offset = 0;
 	struct rpma_mr_local *mr = NULL;
-
-	int is_pmem = 0;
-
-	if (argc >= 4) {
-		char *path = argv[3];
-
-		/* map the file */
-		mr_ptr = pmem_map_file(path, 0 /* len */, 0 /* flags */,
-				0 /* mode */, &mr_size, &is_pmem);
-		if (mr_ptr == NULL) {
-			(void) fprintf(stderr, "pmem_map_file() for %s "
-					"failed\n", path);
-			return -1;
-		}
-
-		/* pmem is expected */
-		if (!is_pmem) {
-			(void) fprintf(stderr, "%s is not an actual PMEM\n",
-				path);
-			(void) pmem_unmap(mr_ptr, mr_size);
-			return -1;
-		}
-
-		/*
-		 * At the beginning of the persistent memory, a signature is
-		 * stored which marks its content as valid. So the length
-		 * of the mapped memory has to be at least of the length of
-		 * the signature to convey any meaningful content and be usable
-		 * as a persistent store.
-		 */
-		if (mr_size < SIGNATURE_LEN) {
-			(void) fprintf(stderr, "%s too small (%zu < %zu)\n",
-					path, mr_size, SIGNATURE_LEN);
-			(void) pmem_unmap(mr_ptr, mr_size);
-			return -1;
-		}
-		data_offset = SIGNATURE_LEN;
-
-		/*
-		 * All of the space under the offset is intended for
-		 * the string contents. Space is assumed to be at least 1 KiB.
-		 */
-		if (mr_size - data_offset < KILOBYTE) {
-			fprintf(stderr, "%s too small (%zu < %zu)\n",
-					path, mr_size, KILOBYTE + data_offset);
-			(void) pmem_unmap(mr_ptr, mr_size);
-			return -1;
-		}
-
-		/*
-		 * If the signature is not in place the persistent content has
-		 * to be initialized and persisted.
-		 */
-		if (strncmp(mr_ptr, SIGNATURE_STR, SIGNATURE_LEN) != 0) {
-			/* write an initial empty string and persist it */
-			char *ch = (char *)mr_ptr + data_offset;
-			ch[0] = '\0';
-			pmem_persist(ch, 1);
-			/* write the signature to mark the content as valid */
-			memcpy(mr_ptr, SIGNATURE_STR, SIGNATURE_LEN);
-			pmem_persist(mr_ptr, SIGNATURE_LEN);
-		}
-	}
-
-	/* if no pmem support or it is not provided */
-	if (mr_ptr == NULL) {
-		(void) fprintf(stderr, NO_PMEM_MSG);
-		mr_ptr = malloc_aligned(KILOBYTE);
-		if (mr_ptr == NULL)
-			return -1;
-
-		mr_size = KILOBYTE;
-	}
+	/* separate 4KiB of PMem for each user */
+	size_t mr_size = 4 * KILOBYTE;
+	char *mr_ptr = pmem_ptr + (user_id - 1) * mr_size;
 
 	/* RPMA resources */
 	struct rpma_peer_cfg *pcfg = NULL;
@@ -120,10 +85,8 @@ main(int argc, char *argv[])
 	struct rpma_conn *conn = NULL;
 
 	/* set and print the initial content */
-	char *data_ptr = (char *)mr_ptr + data_offset;
-	/* mr_size - data_offset >= KILOBYTE */
-	strncpy(data_ptr, INIT_STR, KILOBYTE);
-	(void) printf("The initial content of the server's memory: %s\n", data_ptr);
+	strncpy(mr_ptr, INIT_STR, mr_size);
+	(void) printf("The initial content of the server's memory: %s\n", mr_ptr);
 
 	/* create a peer configuration structure */
 	ret = rpma_peer_cfg_new(&pcfg);
@@ -131,13 +94,10 @@ main(int argc, char *argv[])
 		goto err_free;
 
 	/* configure peer's direct write to pmem support */
-	if (argc == 5) {
-		ret = rpma_peer_cfg_set_direct_write_to_pmem(pcfg,
-				(strcmp(argv[4], ON_STR) == 0));
-		if (ret) {
-			(void) rpma_peer_cfg_delete(&pcfg);
-			goto err_free;
-		}
+	ret = rpma_peer_cfg_set_direct_write_to_pmem(pcfg, true);
+	if (ret) {
+		(void) rpma_peer_cfg_delete(&pcfg);
+		goto err_free;
 	}
 
 	/*
@@ -176,7 +136,6 @@ main(int argc, char *argv[])
 
 	/* calculate data for the client write */
 	struct common_data data = {0};
-	data.data_offset = data_offset;
 	data.mr_desc_size = mr_desc_size;
 	data.pcfg_desc_size = pcfg_desc_size;
 
@@ -214,7 +173,7 @@ main(int argc, char *argv[])
 	if (ret)
 		goto err_mr_dereg;
 
-	(void) printf("Received a new data from the client: %s\n", data_ptr);
+	(void) printf("Received a new data from the client: %s\n", mr_ptr);
 
 err_mr_dereg:
 	/* deregister the memory region */

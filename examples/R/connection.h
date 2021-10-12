@@ -11,22 +11,19 @@
 #include <string.h>
 #include <librpma.h>
 
-#define KILOBYTE 1024
-
-/* signature marking the persistent contents as valid */
-#define SIGNATURE_STR "RPMA_EXAMPLE_SIG"
-#define SIGNATURE_LEN (strlen(SIGNATURE_STR) + 1)
+#define KILOBYTE	1024
+#define MAX_USERS	200
+#define PMEM_MIN_SIZE	(MAX_USERS * 4 * KILOBYTE) /* 4KiB for each user */
 
 #define NO_PMEM_MSG "No <pmem-path> provided. Using DRAM instead.\n"
 
 /*
  * Limited by the maximum length of the private data
- * for rdma_connect() in case of RDMA_PS_TCP (56 bytes).
+ * for rdma_connect() in case of RDMA_PS_TCP (28 bytes).
  */
-#define DESCRIPTORS_MAX_SIZE 24
+#define DESCRIPTORS_MAX_SIZE 26
 
 struct common_data {
-	uint16_t data_offset;	/* user data offset */
 	uint8_t mr_desc_size;	/* size of mr_desc in descriptors[] */
 	uint8_t pcfg_desc_size;	/* size of pcfg_desc in descriptors[] */
 	/* buffer containing mr_desc and pcfg_desc */
