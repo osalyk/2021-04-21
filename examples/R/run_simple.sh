@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 #
-# shell commands to run the simple_* example
+# The shell commands to run the simple_* example.
 #
 
 SERVER_IP=$RPMA_SOFT_ROCE_IP

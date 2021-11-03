@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 #
-# shell commands to build the main example
+# The shell commands to build the main example.
 #
 
 mkdir -p build
