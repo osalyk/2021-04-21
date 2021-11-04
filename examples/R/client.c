@@ -70,9 +70,10 @@ main(int argc, char *argv[])
 	if (ret)
 		goto err_peer_delete;
 
-	/* register the memory RDMA write */
-	ret = rpma_mr_reg(peer, local_mr_ptr, local_mr_size, RPMA_MR_USAGE_WRITE_SRC,
-				&local_mr);
+	/* register the memory for RDMA read and write operations */
+	ret = rpma_mr_reg(peer, local_mr_ptr, local_mr_size,
+			(RPMA_MR_USAGE_READ_DST | RPMA_MR_USAGE_WRITE_SRC),
+			&local_mr);
 	if (ret)
 		goto err_conn_disconnect;
 
