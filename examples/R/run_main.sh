@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 #
-# shell commands to run the main example
+# The shell commands to run the main example.
 #
 
 if [ ! -c /${DEV_DAX} ]; then
