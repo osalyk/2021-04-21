@@ -116,8 +116,8 @@ main(int argc, char *argv[])
 		goto err_mr_remote_delete;
 	} else if (remote_size < KILOBYTE) {
 		fprintf(stderr,
-				"Remote memory region size too small for writing the data of the assumed size (%zu < %d)\n",
-				remote_size, KILOBYTE);
+			"Remote memory region size too small for writing the data of the assumed size (%zu < %d)\n",
+			remote_size, KILOBYTE);
 		goto err_mr_remote_delete;
 	}
 
