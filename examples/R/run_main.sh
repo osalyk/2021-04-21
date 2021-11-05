@@ -14,6 +14,8 @@ SERVER_IP=$RPMA_SOFT_ROCE_IP
 SERVER_PORT=$((62000 + $PMEMUSER_ID))
 
 cd build
+# usage: ./server <server_address> <port> <pmem-path> <user-id>
 ./server $SERVER_IP $SERVER_PORT $DEV_DAX $PMEMUSER_ID &
 sleep 1
+# usage: ./client <server_address> <port>
 ./client $SERVER_IP $SERVER_PORT
