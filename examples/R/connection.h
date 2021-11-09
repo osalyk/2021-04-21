@@ -12,8 +12,6 @@
 #include <librpma.h>
 
 #define KILOBYTE	1024
-#define MAX_USERS	200
-#define PMEM_MIN_SIZE	(MAX_USERS * 4 * KILOBYTE) /* 4KiB for each user */
 
 /*
  * Limited by the maximum length of the private data
