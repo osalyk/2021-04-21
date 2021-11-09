@@ -28,8 +28,6 @@ struct common_data {
 	char descriptors[DESCRIPTORS_MAX_SIZE];
 };
 
-void *malloc_aligned(size_t size);
-
 int common_peer_via_address(const char *addr,
 		enum rpma_util_ibv_context_type type,
 		struct rpma_peer **peer_ptr);
