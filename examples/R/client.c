@@ -4,8 +4,6 @@
 
 /*
  * client.c -- a client of the flush-to-persistent example
- *
- * Please see README.md for a detailed description of this example.
  */
 
 #include <inttypes.h>
