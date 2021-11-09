@@ -12,8 +12,6 @@
 #include <librpma.h>
 
 #define KILOBYTE	1024
-#define MAX_USERS	200
-#define PMEM_MIN_SIZE	(MAX_USERS * 4 * KILOBYTE) /* 4KiB for each user */
 
 /*
  * Limited by the maximum length of the private data
@@ -27,8 +25,6 @@ struct common_data {
 	/* buffer containing mr_desc and pcfg_desc */
 	char descriptors[DESCRIPTORS_MAX_SIZE];
 };
-
-void *malloc_aligned(size_t size);
 
 int common_peer_via_address(const char *addr,
 		enum rpma_util_ibv_context_type type,
