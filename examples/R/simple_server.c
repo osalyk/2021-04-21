@@ -2,7 +2,7 @@
 /* Copyright 2021, Intel Corporation */
 
 /*
- * server.c -- a simple connection server
+ * simple_server.c -- a simple connection server
  */
 
 #include <stdlib.h>
