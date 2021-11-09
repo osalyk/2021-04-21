@@ -14,6 +14,8 @@
 
 #define USAGE_STR	"usage: %s <server_address> <port> <pmem-path> <user-id>\n"
 #define INIT_STR	"This is the initial server string."
+#define MAX_USERS	200
+#define PMEM_MIN_SIZE	(MAX_USERS * 4 * KILOBYTE) /* 4KiB for each user */
 
 #define ERROR_ON_WRONG_USAGE(cond) \
 	do { \
