@@ -8,35 +8,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "connection.h"
-
-/*
- * malloc_aligned -- allocate an aligned chunk of memory
- */
-void *
-malloc_aligned(size_t size)
-{
-	long pagesize = sysconf(_SC_PAGESIZE);
-	if (pagesize < 0) {
-		perror("sysconf");
-		return NULL;
-	}
-
-	/* allocate a page size aligned local memory pool */
-	void *mem;
-	int ret = posix_memalign(&mem, (size_t)pagesize, size);
-	if (ret) {
-		(void) fprintf(stderr, "posix_memalign: %s\n", strerror(ret));
-		return NULL;
-	}
-
-	/* zero the allocated memory */
-	memset(mem, 0, size);
-
-	return mem;
-}
 
 /*
  * common_peer_via_address -- create a new RPMA peer based on ibv_context

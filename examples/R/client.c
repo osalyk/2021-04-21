@@ -11,12 +11,39 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <librpma.h>
+#include <unistd.h>
 #include "connection.h"
 
 #define USAGE_STR	"usage: %s <server_address> <port>\n"
 #define FLUSH_ID	(void *)0xF01D /* a random identifier */
 
 static const char *hello_str = "Hello world!";
+
+/*
+ * malloc_aligned -- allocate an aligned chunk of memory
+ */
+void *
+malloc_aligned(size_t size)
+{
+	long pagesize = sysconf(_SC_PAGESIZE);
+	if (pagesize < 0) {
+		perror("sysconf");
+		return NULL;
+	}
+
+	/* allocate a page size aligned local memory pool */
+	void *mem;
+	int ret = posix_memalign(&mem, (size_t)pagesize, size);
+	if (ret) {
+		(void) fprintf(stderr, "posix_memalign: %s\n", strerror(ret));
+		return NULL;
+	}
+
+	/* zero the allocated memory */
+	memset(mem, 0, size);
+
+	return mem;
+}
 
 int
 main(int argc, char *argv[])
